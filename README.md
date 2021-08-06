@@ -1,2 +1,2 @@
-# Paddle-RethinkingBiSeNet
-Paddle复现论文Rethinking BiSeNet For Real-time Semantic Segmentation
+# Paddle-RethinkingBiSeNet 项目介绍  
+PaddlePaddle 复现论文 Rethinking BiSeNet For Real-time Semantic Segmentation

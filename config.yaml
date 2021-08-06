@@ -1,0 +1,13 @@
+# 数据集参数
+dataset_config:
+  # 图片尺寸
+  img_size: 400
+
+# 训练参数
+train_config:
+  # 训练轮数
+  num_epochs: 10
+  # 训练批大小
+  batch_size: 4
+  # 学习路
+  learning_rate: 0.001

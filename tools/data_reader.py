@@ -26,7 +26,7 @@ class SegDataset(Dataset):
         self.img_size = dataset_cfg["img_size"]
 
     def __getitem__(self, item):
-        img = np.random.random((3, 400, 400))
+        img = np.random.random((3, self.img_size, self.img_size)).astype(np.float32)
         label = np.random.random((2, 400, 400))
         return img, label
 

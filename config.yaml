@@ -1,7 +1,7 @@
 # 数据集参数
 dataset_config:
   # 图片尺寸
-  img_size: 400
+  img_size: 224
 
 # 训练参数
 train_config:
@@ -9,5 +9,10 @@ train_config:
   num_epochs: 10
   # 训练批大小
   batch_size: 4
-  # 学习路
+  # 学习率
   learning_rate: 0.001
+  # stage3、stage4、stage5的次数
+  num_stage:
+    - 3
+    - 3
+    - 3

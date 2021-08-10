@@ -29,8 +29,8 @@ def run_train():
     img_size = 224
     train_cfg = cfg["train_config"]
 
-    train_dataset = SegDataset()
-    train_reader = DataLoader(train_dataset, batch_size=train_cfg["batch_size"], shuffle=True)
+    train_dataset = SegDataset(datalist_file="data/val.list")
+    train_reader = DataLoader(train_dataset, batch_size=train_cfg["batch_size"], shuffle=False)
     test_dataset = SegDataset(is_test=True)
     test_reader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 

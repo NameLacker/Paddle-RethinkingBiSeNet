@@ -1,7 +1,17 @@
 # 数据集参数
 dataset_config:
-  # 图片尺寸
-  img_size: 224
+  # 图片尺寸(h, w)
+  img_size:
+    - 512
+    - 1024
+  #　数据集根目录
+  root: /home/lacker/work/save_data
+  # 训练数据列表文件
+  trainset_file: data/train.list
+  # 验证数据列表文件
+  valset_file: data/val.list
+  # 测试数据列表文件
+  testset_file: data/test.list
 
 # 训练参数
 train_config:

@@ -15,7 +15,7 @@ import paddle
 from paddle import nn
 from paddle.nn import functional as F
 
-from .modules import Conv2D, STDC, FFM, ContextPath, BisNetOutput
+from .modules import Conv2D, STDC, FFM, ContextPath, BisNetOutput, Head
 
 
 class BiSeNet(nn.Layer):
@@ -45,6 +45,9 @@ class BiSeNet(nn.Layer):
         self.contextpath = ContextPath()
         self.ffm = FFM()
         self.conv_out = BisNetOutput(256, 256, num_classes)
+
+        self.seg_head = Head(2, 2)
+        self.detail_head = Head(256, 2)
 
         self.avg_pool = nn.AvgPool2D(3, 2, 1)
         self.global_avg_pool = nn.AdaptiveAvgPool2D(1)
@@ -79,4 +82,10 @@ class BiSeNet(nn.Layer):
         feat_fuse = self.ffm(feat_res8, feat_cp8)
         feat_out = self.conv_out(feat_fuse)
         feat_out = F.upsample(feat_out, size=(H, W), mode="bilinear")
-        return stage6, feat_out
+
+        if self.training:  # 训练阶段
+            lr_seg_out = self.seg_head(feat_out)
+            lr_detail_out = self.detail_head(feat_res8)
+            return stage6, lr_seg_out, lr_detail_out
+        else:  # 预测阶段
+            return feat_out

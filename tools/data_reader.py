@@ -27,7 +27,8 @@ class SegDataset(Dataset):
 
     def __getitem__(self, item):
         img = np.random.random((3, self.img_size, self.img_size)).astype(np.float32)
-        label = np.random.random((2, 400, 400))
+        # label的每个值代表该像素的类别
+        label = np.random.randint(0, 2, (self.img_size, self.img_size)).astype(np.int64)
         return img, label
 
     def __len__(self):

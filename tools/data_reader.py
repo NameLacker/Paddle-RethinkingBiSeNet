@@ -12,6 +12,7 @@
 
 import numpy as np
 import cv2 as cv
+import random
 import json
 import os
 
@@ -24,11 +25,12 @@ dataset_cfg = get_configuration()["dataset_config"]
 
 
 class SegDataset(Dataset):
-    def __init__(self, is_test=False, datalist_file=None, cropsize=(640, 480)):
+    def __init__(self, is_test=False, datalist_file=None, cropsize=(512, 1024)):
         super(SegDataset, self).__init__()
         self.img_h, self.img_w = dataset_cfg["img_size"]
         self.root = dataset_cfg["root"]
         self.is_test = is_test
+        self.cropsize = cropsize
         self.datalist_file = dataset_cfg["valset_file"] if is_test else dataset_cfg["trainset_file"]
         if datalist_file is not None:  # 读取指定数据列表文件内容
             self.datalist_file = datalist_file
@@ -39,7 +41,7 @@ class SegDataset(Dataset):
         self.datalist = []
         self.create_datalist()
 
-        self.trans_train = Compose([RandomHorizontalFlip(), RandomCrop(size=cropsize)])
+        self.random_horizontal_flip = RandomHorizontalFlip(1)
         self.color_jitter = ColorJitter(0.5, 0.5, 0.5)
         self.normalize = Normalize(mean=[127.5, 127.5, 127.5], std=[127.5, 127.5, 127.5], data_format='HWC')
 
@@ -61,10 +63,15 @@ class SegDataset(Dataset):
         return gt_img[0]  # 提取单通道作为标签
 
     def process(self, img, gt_img):
+        H, W, C = img.shape
         # 随机翻转和裁剪(原图和gt图)
-        im_lb = dict(im=img, lb=gt_img)
-        im_lb = self.trans_train(im_lb)
-        img, gt_img = im_lb['im'], im_lb['lb']
+        if random.random > 0.5:
+            img = self.random_horizontal_flip(img)
+            gt_img = self.random_horizontal_flip(gt_img)
+        if random.random > 0.5:
+            # todo: 裁剪原图待更新
+            pass
+
         # 随机颜色扰动(原图)
         img = self.color_jitter(img)
         return img, gt_img

@@ -40,6 +40,8 @@ class OhemCELoss(nn.Layer):
 class DetailAggregateLoss(nn.Layer):
     def __init__(self):
         super(DetailAggregateLoss, self).__init__()
+        self.conv = nn.Conv2D(1, 1, 3)
 
     def forward(self, boundary_logits, gtmasks):
-        return
+        loss = self.conv(boundary_logits)
+        return loss

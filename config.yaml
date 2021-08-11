@@ -5,7 +5,7 @@ dataset_config:
     - 512
     - 1024
   #　数据集根目录
-  root: /home/lacker/work/save_data
+  root: /home/lacker/work/Dataset/cityscapes
   # 训练数据列表文件
   trainset_file: data/train.list
   # 验证数据列表文件
@@ -23,6 +23,14 @@ train_config:
   learning_rate: 0.001
   # stage3、stage4、stage5的次数
   num_stage:
+    - 4
+    - 5
     - 3
-    - 3
-    - 3
+  # use_boundary
+  use_boundary_2: False
+  use_boundary_4: False
+  use_boundary_8: True
+  use_boundary_16: False
+
+
+

@@ -15,7 +15,7 @@ import paddle
 from paddle import optimizer
 from paddle.io import DataLoader
 
-from tools.data_reader import SegDataset
+from tools.data_reader import CityScapes
 from models.network import BiSeNet
 from models.loss import OhemCELoss, DetailAggregateLoss
 
@@ -28,27 +28,55 @@ def run_train():
     # 获取训练配置
     img_size = 224
     train_cfg = cfg["train_config"]
+    use_boundary_2 = train_cfg["use_boundary_2"]
+    use_boundary_4 = train_cfg["use_boundary_4"]
+    use_boundary_8 = train_cfg["use_boundary_8"]
 
-    train_dataset = SegDataset(datalist_file="data/val.list")
+    train_dataset = CityScapes(datalist_file="data/val.list")
     train_reader = DataLoader(train_dataset, batch_size=train_cfg["batch_size"], shuffle=False)
-    test_dataset = SegDataset(is_test=True)
+    test_dataset = CityScapes(is_test=True)
     test_reader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    net = BiSeNet()
+    net = BiSeNet(use_boundary_2=use_boundary_2, use_boundary_4=use_boundary_4, use_boundary_8=use_boundary_8)
 
     score_thres = 0.7
     n_min = 16 * img_size * img_size // 16
     criteria_p = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=255)
+    criteria_16 = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=255)
+    criteria_32 = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=255)
     boundary_loss_func = DetailAggregateLoss()
 
-    opt = optimizer.SGD(learning_rate=train_cfg["learning_rate"], parameters=net.parameters())
+    # 融合网络和损失的参数，便于同时更新两者的参数
+    net_parameters = net.parameters()
+    net_parameters.extend(boundary_loss_func.parameters())
+    opt = optimizer.SGD(learning_rate=train_cfg["learning_rate"], parameters=net_parameters)
 
     for epoch_id in range(train_cfg["num_epochs"]):
         net.train()
         for batch_id, (image, label) in enumerate(train_reader):
-            stage6, lp_seg_out, lp_detail_out = net(image)
-            seg_loss = criteria_p(lp_seg_out, label)
-            detail_loss = boundary_loss_func(lp_detail_out, label)
+            if use_boundary_2 and use_boundary_4 and use_boundary_8:
+                out, out16, out32, detail2, detail4, detail8 = net(image)
+            elif (not use_boundary_2) and use_boundary_4 and use_boundary_8:
+                out, out16, out32, detail4, detail8 = net(image)
+            elif (not use_boundary_2) and (not use_boundary_4) and use_boundary_8:
+                out, out16, out32, detail8 = net(image)
+            else:
+                out, out16, out32 = net(image)
+            # 分割损失
+            lossp = criteria_p(out, label)
+            loss2 = criteria_16(out16, label)
+            loss3 = criteria_32(out32, label)
+
+            if use_boundary_2:
+                # detail2 损失
+                boundary_loss_func(detail2, label)
+
+            if use_boundary_4:
+                boundary_loss_func(detail4, label)
+
+            if use_boundary_8:
+                # detail8 损失
+                boundary_loss_func(detail8, label)
 
         net.eval()
         for batch_id, (image, label) in enumerate(test_reader):

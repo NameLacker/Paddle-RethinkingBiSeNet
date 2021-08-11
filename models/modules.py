@@ -124,23 +124,6 @@ class FFM(nn.Layer):
         return feat_out
 
 
-class Head(nn.Layer):
-    def __init__(self, in_channels, out_channels):
-        super(Head, self).__init__()
-        self.conv1 = nn.Conv2D(in_channels, in_channels, 3, 1, 1)
-        self.conv2 = nn.Conv2D(in_channels, out_channels, 1)
-        self.bn = nn.BatchNorm2D(out_channels)
-        self.relu = nn.ReLU()
-
-    def forward(self, ftp):
-        feat = self.conv1(ftp)
-        feat = self.conv2(feat)
-        feat = self.bn(feat)
-        feat = self.relu(feat)
-
-        return feat
-
-
 class ContextPath(nn.Layer):
     def __init__(self):
         super(ContextPath, self).__init__()

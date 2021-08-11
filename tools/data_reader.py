@@ -24,9 +24,9 @@ from tools.utils import get_configuration
 dataset_cfg = get_configuration()["dataset_config"]
 
 
-class SegDataset(Dataset):
+class CityScapes(Dataset):
     def __init__(self, is_test=False, datalist_file=None, cropsize=(512, 1024)):
-        super(SegDataset, self).__init__()
+        super(CityScapes, self).__init__()
         self.img_h, self.img_w = dataset_cfg["img_size"]
         self.root = dataset_cfg["root"]
         self.is_test = is_test
@@ -63,20 +63,26 @@ class SegDataset(Dataset):
         return gt_img[0]  # 提取单通道作为标签
 
     def process(self, img, gt_img):
-        H, W, C = img.shape
-        # 随机翻转和裁剪(原图和gt图)
+        H, W, C = gt_img.shape
+
+        # 随机翻转(原图和gt图)
         if random.random > 0.5:
             img = self.random_horizontal_flip(img)
             gt_img = self.random_horizontal_flip(gt_img)
-        if random.random > 0.5:
-            # todo: 裁剪原图待更新
-            pass
+        # 随机位置裁剪(原图和gt图)
+        if H > self.img_h and W > self.img_w:
+            # 生成裁剪框的起点，并限制起点的位置
+            x = random.randint(0, W - self.img_w - 1)
+            y = random.randint(0, H - self.img_h - 1)
+            img = img[y:y+self.img_h, x:x+self.img_w]
+            gt_img = gt_img[y:y+self.img_h, x:x+self.img_w]
 
         # 随机颜色扰动(原图)
         img = self.color_jitter(img)
         return img, gt_img
 
     def __getitem__(self, item):
+        """
         image_path, gt_path = self.datalist[item]["image_path"], self.datalist[item]["gt_path"]
         img, gt_img = cv.imread(image_path), cv.imread(gt_path)
 
@@ -88,6 +94,10 @@ class SegDataset(Dataset):
         img = np.transpose(img, (2, 0, 1))
         # 处理gt标签
         gt_img = self.covert_label(gt_img)
+        """
+
+        img = np.random.random((3, 224, 224)).astype(np.float32)
+        gt_img = np.random.random((224, 224)).astype(np.int64)
         return img, gt_img
 
     def __len__(self):

@@ -48,7 +48,7 @@ def run_train():
 
     # 融合网络和损失的参数，便于同时更新两者的参数
     net_parameters = net.parameters()
-    net_parameters.extend(boundary_loss_func.parameters())
+    # net_parameters.extend(boundary_loss_func.parameters())
     opt = optimizer.SGD(learning_rate=train_cfg["learning_rate"], parameters=net_parameters)
 
     for epoch_id in range(train_cfg["num_epochs"]):
@@ -67,16 +67,29 @@ def run_train():
             loss2 = criteria_16(out16, label)
             loss3 = criteria_32(out32, label)
 
+            boundery_bce_loss, boundery_dice_loss = 0., 0.
             if use_boundary_2:
                 # detail2 损失
-                boundary_loss_func(detail2, label)
+                boundery_bce_loss2,  boundery_dice_loss2 = boundary_loss_func(detail2, label)
+                boundery_bce_loss += boundery_bce_loss2
+                boundery_dice_loss += boundery_dice_loss2
 
             if use_boundary_4:
-                boundary_loss_func(detail4, label)
+                boundery_bce_loss4,  boundery_dice_loss4 = boundary_loss_func(detail4, label)
+                boundery_bce_loss += boundery_bce_loss4
+                boundery_dice_loss += boundery_dice_loss4
 
             if use_boundary_8:
                 # detail8 损失
-                boundary_loss_func(detail8, label)
+                boundery_bce_loss8,  boundery_dice_loss8 = boundary_loss_func(detail8, label)
+                boundery_bce_loss += boundery_bce_loss8
+                boundery_dice_loss += boundery_dice_loss8
+
+            loss = lossp + loss2 + loss3 + boundery_bce_loss + boundery_dice_loss
+            loss.backward()
+            opt.minimize(loss)
+            net.clear_gradients()
+            print("Epoch: {}, Batch: {}, Loss: {}, learning_rate: None".format(epoch_id, batch_id, loss.numpy()[0]))
 
         net.eval()
         for batch_id, (image, label) in enumerate(test_reader):

@@ -48,7 +48,7 @@ def run_train():
 
     # 融合网络和损失的参数，便于同时更新两者的参数
     net_parameters = net.parameters()
-    # net_parameters.extend(boundary_loss_func.parameters())
+    net_parameters.extend(boundary_loss_func.parameters())
     opt = optimizer.SGD(learning_rate=train_cfg["learning_rate"], parameters=net_parameters)
 
     for epoch_id in range(train_cfg["num_epochs"]):

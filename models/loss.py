@@ -16,9 +16,9 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 
 
-def dice_loss_func(input, target):
+def dice_loss_func(inputs, target):
     smooth = 1.
-    iflat = input.flatten()
+    iflat = inputs.flatten()
     tflat = target.flatten()
     intersection = paddle.sum(iflat * tflat)
     loss = 1 - ((2. * intersection + smooth) / (paddle.sum(iflat) + paddle.sum(tflat) + smooth))
@@ -54,10 +54,9 @@ class DetailAggregateLoss(nn.Layer):
             [-1, -1, -1, -1, -8, -1, -1, -1, -1],
             dtype=paddle.float32).reshape((1, 1, 3, 3))
 
-        self.fuse_kernel = paddle.ParamAttr(
-            initializer=paddle.nn.initializer.Assign(
-                np.array([[6./10], [3./10], [1./10]]).reshape((1, 3, 1, 1))
-            ))
+        x = paddle.to_tensor([[6./10], [3./10], [1./10]], dtype=paddle.float32).reshape((1, 3, 1, 1))
+        self.fuse_kernel = paddle.create_parameter(x.shape, dtype=str(x.numpy().dtype),
+                                                   default_initializer=paddle.nn.initializer.Assign(x))
 
     def forward(self, boundary_logits, gtmasks):
         boundary_targets = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel, padding=1)

@@ -10,6 +10,7 @@
 ========================================
 """
 
+import numpy as np
 import yaml
 import os
 
@@ -26,3 +27,16 @@ def get_configuration():
     cfg = f.read()
     d = yaml.load(cfg)  # 用load方法转字典
     return d
+
+
+def fill_ndarray(t):
+    """
+    替换nan值为平均值
+    :param t: 
+    :return: 
+    """
+    nan_num = np.count_nonzero(t != t)  # 判断该列存在不为0的数个数
+    if nan_num != 0:
+        temp_not_nan_col = t[t == t]
+        t[np.isnan(t)] = temp_not_nan_col.mean()
+    return np.mean(t)

@@ -16,12 +16,12 @@ from paddle import nn
 from paddle.nn import functional as F
 
 from .modules import Conv2D, STDC, FFM, ContextPath, BisNetOutput
-from .loss import OhemCELoss, DetailAggregateLoss
+from .loss import DetailAggregateLoss
 
 
 class BiSeNet(nn.Layer):
-    def __init__(self, thresh, n_min, num_classes=19, stages=None,
-                 use_boundary_2=False, use_boundary_4=False, use_boundary_8=True, ignore_lb=255):
+    def __init__(self, num_classes=19, stages=None,
+                 use_boundary_2=False, use_boundary_4=False, use_boundary_8=True):
         super(BiSeNet, self).__init__()
         if stages is None:  # STDC2-50
             self.stages = [4, 5, 3]
@@ -31,10 +31,6 @@ class BiSeNet(nn.Layer):
         self.use_boundary_2 = use_boundary_2
         self.use_boundary_4 = use_boundary_4
         self.use_boundary_8 = use_boundary_8
-
-        # ====================================== 损失参数配置 ======================================
-        self.criteria_loss = OhemCELoss(thresh, n_min)
-        self.boundary_loss = DetailAggregateLoss()
 
         # ====================================== 骨干网络 ======================================
         self.convX1, self.convX2, self.stdcX3s, self.stdcX4s, self.stdcX5s = self.create_backbone()

@@ -9,8 +9,8 @@
 # Github 　： https://github.com/NameLacker
 # ===========================================
 
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 import paddle
 
 import paddle.nn as nn
@@ -49,17 +49,29 @@ class OhemCELoss(nn.Layer):
 
 class DetailAggregateLoss(nn.Layer):
     def __init__(self):
+        """
+        todo: 重写，此方法用paddle会导致显存显著增加
+        """
         super(DetailAggregateLoss, self).__init__()
 
-        self.laplacian_kernel = paddle.to_tensor(
+        """self.laplacian_kernel = paddle.to_tensor(
             [-1, -1, -1, -1, 8, -1, -1, -1, -1],
-            dtype=paddle.float32).reshape((1, 1, 3, 3))
+            dtype=paddle.float32).reshape((1, 1, 3, 3))"""
+        self.laplacian_kernel = np.array([-1, -1, -1, -1, 8, -1, -1, -1, -1], dtype=np.float32).reshape((3, 3))
 
-        x = paddle.to_tensor([[6./10], [3./10], [1./10]], dtype=paddle.float32).reshape((1, 3, 1, 1))
-        self.fuse_kernel = paddle.create_parameter(x.shape, dtype=str(x.numpy().dtype),
-                                                   default_initializer=paddle.nn.initializer.Assign(x))
+        '''self.fuse_kernel = paddle.to_tensor([[6./10], [3./10], [1./10]], 
+            dtype=paddle.float32).reshape((1, 3, 1, 1))'''
+        self.fuse_kernel = np.array([[6./10], [3./10], [1./10]], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def forward(self, boundary_logits, gtmasks):
+        boundary_targets = gtmasks.numpy()
+        for idx, np_gtmask in enumerate(boundary_targets):
+            np_gtmask = cv.filter2D(np_gtmask.astype(np.uint8), -1, self.laplacian_kernel)
+            np_gtmask = np.clip(np_gtmask, a_min=0, a_max=10000)
+            np_gtmask[np_gtmask > 0.1] = 1
+            np_gtmask[np_gtmask <= 0.1] = 0
+            boundary_targets[idx] = np_gtmask
+
         boundary_targets = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel, padding=1)
         boundary_targets = boundary_targets.clip(min=0)
 

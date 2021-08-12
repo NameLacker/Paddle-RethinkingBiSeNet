@@ -22,8 +22,9 @@ from visualdl import LogWriter
 
 from tools.data_reader import CityScapes
 from models.network import BiSeNet
-
+from models.loss import OhemCELoss, DetailAggregateLoss
 from tools.utils import get_configuration, fill_ndarray
+
 
 cfg = get_configuration()
 log_name = str(int(time.time()))
@@ -80,9 +81,7 @@ def run_train():
         eval_dataset, batch_size=1, shuffle=False, drop_last=False)
     eval_loader = paddle.io.DataLoader(eval_dataset, batch_sampler=eval_batch_sampler, num_workers=0, return_list=True)
 
-    score_thres = 0.7
-    n_min = 16 * img_size * img_size // 16
-    net = BiSeNet(thresh=score_thres, n_min=n_min, num_classes=n_classes,
+    net = BiSeNet(num_classes=n_classes,
                   use_boundary_2=use_boundary_2, use_boundary_4=use_boundary_4, use_boundary_8=use_boundary_8)
 
     # 优化器配置
@@ -91,6 +90,12 @@ def run_train():
     scheduler = paddle.optimizer.lr.PiecewiseDecay(boundaries=opt_config["boundaries"],
                                                    values=values)
     opt = optimizer.SGD(learning_rate=scheduler, parameters=net.parameters(), weight_decay=5e-4)
+
+    # 损失函数
+    score_thres = 0.7
+    n_min = 16 * img_size * img_size // 16
+    criteria_loss = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=255)
+    boundary_loss = DetailAggregateLoss()
 
     maxmIOU50 = -1
     stop_count = 0
@@ -108,25 +113,25 @@ def run_train():
             else:
                 out, out16, out32 = net(image)
             # 分割损失
-            lossp = net.criteria_loss(out, label)
-            loss2 = net.criteria_loss(out16, label)
-            loss3 = net.criteria_loss(out32, label)
+            lossp = criteria_loss(out, label)
+            loss2 = criteria_loss(out16, label)
+            loss3 = criteria_loss(out32, label)
 
             boundery_bce_loss, boundery_dice_loss = 0., 0.
             if use_boundary_2:
                 # detail2 损失
-                boundery_bce_loss2, boundery_dice_loss2 = net.boundary_loss(detail2, label)
+                boundery_bce_loss2, boundery_dice_loss2 = boundary_loss(detail2, label)
                 boundery_bce_loss += boundery_bce_loss2
                 boundery_dice_loss += boundery_dice_loss2
 
             if use_boundary_4:
-                boundery_bce_loss4, boundery_dice_loss4 = net.boundary_loss(detail4, label)
+                boundery_bce_loss4, boundery_dice_loss4 = boundary_loss(detail4, label)
                 boundery_bce_loss += boundery_bce_loss4
                 boundery_dice_loss += boundery_dice_loss4
 
             if use_boundary_8:
                 # detail8 损失
-                boundery_bce_loss8, boundery_dice_loss8 = net.boundary_loss(detail8, label)
+                boundery_bce_loss8, boundery_dice_loss8 = boundary_loss(detail8, label)
                 boundery_bce_loss += boundery_bce_loss8
                 boundery_dice_loss += boundery_dice_loss8
 

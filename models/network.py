@@ -16,11 +16,12 @@ from paddle import nn
 from paddle.nn import functional as F
 
 from .modules import Conv2D, STDC, FFM, ContextPath, BisNetOutput
+from .loss import OhemCELoss, DetailAggregateLoss
 
 
 class BiSeNet(nn.Layer):
-    def __init__(self, num_classes=2, stages=None,
-                 use_boundary_2=False, use_boundary_4=False, use_boundary_8=True):
+    def __init__(self, thresh, n_min, num_classes=19, stages=None,
+                 use_boundary_2=False, use_boundary_4=False, use_boundary_8=True, ignore_lb=255):
         super(BiSeNet, self).__init__()
         if stages is None:  # STDC2-50
             self.stages = [4, 5, 3]
@@ -31,26 +32,35 @@ class BiSeNet(nn.Layer):
         self.use_boundary_4 = use_boundary_4
         self.use_boundary_8 = use_boundary_8
 
+        # ====================================== 损失参数配置 ======================================
+        self.criteria_loss = OhemCELoss(thresh, n_min)
+        self.boundary_loss = DetailAggregateLoss()
+
+        # ====================================== 骨干网络 ======================================
         self.convX1, self.convX2, self.stdcX3s, self.stdcX4s, self.stdcX5s = self.create_backbone()
 
-        self.convX6 = Conv2D(1024, 1024, 1, 1, 0)
-
+        # ====================================== 分割Decoder配置 ======================================
         self.contextpath = ContextPath()
         self.ffm = FFM()
         self.conv_out = BisNetOutput(256, 256, num_classes)
         self.conv_out16 = BisNetOutput(128, 64, num_classes)
         self.conv_out32 = BisNetOutput(128, 64, num_classes)
-
         self.conv_out_sp2 = BisNetOutput(32, 64, 1)
         self.conv_out_sp4 = BisNetOutput(64, 64, 1)
         self.conv_out_sp8 = BisNetOutput(256, 64, 1)
 
+        # ====================================== 分类配置 ======================================
+        self.convX6 = Conv2D(1024, 1024, 1, 1, 0)
         self.avg_pool = nn.AvgPool2D(3, 2, 1)
         self.global_avg_pool = nn.AdaptiveAvgPool2D(1)
         self.linear_1 = nn.Linear(1024, 1024)
         self.linear_2 = nn.Linear(1024, 1000)
 
     def create_backbone(self):
+        """
+        创建骨干网络
+        :return:
+        """
         convX1 = Conv2D(3, 32, 3, 2, 1)
         convX2 = Conv2D(32, 64, 3, 2, 1)
 
@@ -89,12 +99,6 @@ class BiSeNet(nn.Layer):
         # stage5
         for idx, s5 in enumerate(self.stdcX5s):
             feat_res32 = s5(feat_res16) if idx == 0 else s5(feat_res32)
-
-        # stage6 (分类)
-        stage6 = self.convX6(feat_res32)
-        stage6 = self.global_avg_pool(stage6).flatten(start_axis=1)
-        stage6 = self.linear_1(stage6)
-        class_preds = self.linear_2(stage6)
 
         # Decoder
         feat_cp8, feat_cp16 = self.contextpath(feat_res8, feat_res16, feat_res32)

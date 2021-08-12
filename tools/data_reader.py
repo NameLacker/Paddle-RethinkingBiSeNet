@@ -93,6 +93,7 @@ class CityScapes(Dataset):
         img = np.transpose(img, (2, 0, 1))
         # 处理gt标签
         gt_img = self.covert_label(gt_img)
+
         return img, gt_img
 
     def __len__(self):

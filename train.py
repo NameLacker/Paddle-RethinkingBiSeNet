@@ -18,7 +18,6 @@ import os
 
 from paddle import optimizer
 import paddle.nn.functional as F
-from paddle.io import DataLoader
 from visualdl import LogWriter
 
 from tools.data_reader import CityScapes
@@ -72,9 +71,14 @@ def run_train():
     use_boundary_8 = train_cfg["use_boundary_8"]
 
     train_dataset = CityScapes(datalist_file="data/val.list")
-    train_reader = DataLoader(train_dataset, batch_size=train_cfg["batch_size"], shuffle=True, drop_last=True)
-    test_dataset = CityScapes(is_test=True)
-    test_reader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    train_batch_sampler = paddle.io.DistributedBatchSampler(
+        train_dataset, batch_size=train_cfg["batch_size"], shuffle=True, drop_last=True)
+    train_loader = paddle.io.DataLoader(train_dataset, batch_sampler=train_batch_sampler, num_workers=0,
+                                        return_list=True)
+    eval_dataset = CityScapes(is_test=True)
+    eval_batch_sampler = paddle.io.DistributedBatchSampler(
+        eval_dataset, batch_size=1, shuffle=False, drop_last=False)
+    eval_loader = paddle.io.DataLoader(eval_dataset, batch_sampler=eval_batch_sampler, num_workers=0, return_list=True)
 
     score_thres = 0.7
     n_min = 16 * img_size * img_size // 16
@@ -94,7 +98,7 @@ def run_train():
     val_step = 0
     for epoch_id in range(train_cfg["num_epochs"]):
         net.train()
-        for batch_id, (image, label) in enumerate(train_reader):
+        for batch_id, (image, label) in enumerate(train_loader):
             if use_boundary_2 and use_boundary_4 and use_boundary_8:
                 out, out16, out32, detail2, detail4, detail8 = net(image)
             elif (not use_boundary_2) and use_boundary_4 and use_boundary_8:
@@ -141,9 +145,9 @@ def run_train():
                                 loss.numpy()[0], boundery_bce_loss.numpy()[0], boundery_dice_loss.numpy()[0],
                                 scheduler.get_lr()))
         net.eval()
-        num_eval = 20
+        num_eval = eval_dataset.__len__()
         hist = np.zeros((n_classes, n_classes), dtype=np.float32)
-        for batch_id, (image, label) in enumerate(test_reader):
+        for batch_id, (image, label) in enumerate(eval_loader):
             image = F.upsample(image, scale_factor=0.5, mode="bilinear")  # STDC2-Se50标准的预测输入
             logits = net(image)
 

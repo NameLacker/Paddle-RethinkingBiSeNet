@@ -15,8 +15,8 @@ import paddle
 import os
 
 from paddle import optimizer
-from paddle.io import DataLoader
 import paddle.nn.functional as F
+from paddle.io import DataLoader
 
 from tools.data_reader import CityScapes
 from models.network import BiSeNet

@@ -66,7 +66,7 @@ class CityScapes(Dataset):
         H, W, C = gt_img.shape
 
         # 随机翻转(原图和gt图)
-        if random.random > 0.5:
+        if random.random() > 0.5:
             img = self.random_horizontal_flip(img)
             gt_img = self.random_horizontal_flip(gt_img)
         # 随机位置裁剪(原图和gt图)
@@ -82,7 +82,6 @@ class CityScapes(Dataset):
         return img, gt_img
 
     def __getitem__(self, item):
-        """
         image_path, gt_path = self.datalist[item]["image_path"], self.datalist[item]["gt_path"]
         img, gt_img = cv.imread(image_path), cv.imread(gt_path)
 
@@ -94,10 +93,6 @@ class CityScapes(Dataset):
         img = np.transpose(img, (2, 0, 1))
         # 处理gt标签
         gt_img = self.covert_label(gt_img)
-        """
-
-        img = np.random.random((3, 224, 224)).astype(np.float32)
-        gt_img = np.random.random((224, 224)).astype(np.int64)
         return img, gt_img
 
     def __len__(self):

@@ -61,15 +61,14 @@ class DetailAggregateLoss(nn.Layer):
     def forward(self, boundary_logits, gtmasks):
         boundary_targets = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel, padding=1)
         boundary_targets = boundary_targets.clip(min=0)
+
         boundary_targets[boundary_targets > 0.1] = 1
         boundary_targets[boundary_targets <= 0.1] = 0
 
         boundary_targets_x2 = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel,
                                        stride=2, padding=1).clip(min=0)
-
         boundary_targets_x4 = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel,
                                        stride=4, padding=1).clip(min=0)
-
         boundary_targets_x8 = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel,
                                        stride=8, padding=1).clip(min=0)
 

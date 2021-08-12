@@ -9,6 +9,7 @@
 # Github 　： https://github.com/NameLacker
 # ===========================================
 
+import cv2 as cv
 import numpy as np
 import paddle
 
@@ -51,7 +52,7 @@ class DetailAggregateLoss(nn.Layer):
         super(DetailAggregateLoss, self).__init__()
 
         self.laplacian_kernel = paddle.to_tensor(
-            [-1, -1, -1, -1, -8, -1, -1, -1, -1],
+            [-1, -1, -1, -1, 8, -1, -1, -1, -1],
             dtype=paddle.float32).reshape((1, 1, 3, 3))
 
         x = paddle.to_tensor([[6./10], [3./10], [1./10]], dtype=paddle.float32).reshape((1, 3, 1, 1))

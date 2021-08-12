@@ -22,7 +22,7 @@ train_config:
   # 训练轮数
   num_epochs: 10
   # 训练批大小
-  batch_size: 4
+  batch_size: 1
   # stage3、stage4、stage5的次数
   num_stage:
     - 4

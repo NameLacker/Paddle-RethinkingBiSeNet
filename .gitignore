@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+# project
+data
+inferences
+logs
+log
+config.yaml
+
 # Distribution / packaging
 .Python
 build/

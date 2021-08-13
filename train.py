@@ -23,7 +23,8 @@ from visualdl import LogWriter
 from tools.data_reader import CityScapes
 from models.network import BiSeNet
 from models.loss import OhemCELoss, boundary_loss
-from tools.utils import get_configuration, fill_ndarray
+from tools.utils import get_configuration
+from tools.evaluation import evaluate
 
 
 cfg = get_configuration()
@@ -148,32 +149,23 @@ def run_train():
                         .format(epoch_id, batch_id,
                                 loss.numpy()[0], boundery_bce_loss.numpy()[0], boundery_dice_loss.numpy()[0],
                                 scheduler.get_lr()))
+            break
         net.eval()
         num_eval = eval_dataset.__len__()
         hist = np.zeros((n_classes, n_classes), dtype=np.float32)
         for batch_id, (image, label) in enumerate(eval_loader):
-            image = F.upsample(image, scale_factor=0.5, mode="bilinear")  # STDC2-Se50标准的预测输入
-            logits = net(image)
-
-            logits = F.upsample(logits, scale_factor=2, mode="bilinear")
-            probs = F.softmax(logits, axis=1)
-            preds = paddle.argmax(probs, axis=1)
-
-            keep = label != 255
-
-            np_keep = keep.numpy()
-            np_label = label.numpy()
-            np_preds = preds.numpy()
-            hist += np.bincount(np_label[np_keep] * n_classes + np_preds[np_keep],
-                                minlength=n_classes ** 2).reshape((n_classes, n_classes)).astype(np.float32)
+            hist += evaluate(image, label, net, n_classes=n_classes)
             print("\r", end="")
             percentage = int(100 * batch_id / num_eval)
             print("Evalution progress rate: {}%: ".format(percentage), "▋" * (percentage // 2), end="")
+            if batch_id == 10:
+                break
         print()
-        ious = np.diag(hist) / (np.sum(hist, axis=0) + np.sum(hist, axis=1) - np.diag(hist))
-        mIOU50 = fill_ndarray(ious)  # 增加对有nan值的处理
+        ious = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
+        mIOU50 = np.nanmean(ious)  # 增加对有nan值的处理
         log_writer.add_scalar("eval/mIOU50", step=val_step, value=mIOU50)
         val_step += 1
+
         logger.info("当前验证集平均 mIOU50: {:.4}".format(mIOU50))
         if mIOU50 >= maxmIOU50:
             stop_count = 0

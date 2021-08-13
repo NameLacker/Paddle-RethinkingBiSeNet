@@ -22,7 +22,7 @@ def dice_loss_func(inputs, target):
     iflat = inputs.flatten()
     tflat = target.flatten()
     intersection = paddle.sum(iflat * tflat)
-    loss = 1 - ((2. * intersection + smooth) / (paddle.sum(paddle.square(iflat)) + paddle.sum(paddle.square(tflat)) + smooth))
+    loss = 1 - (2.*intersection + smooth)/(paddle.sum(paddle.square(iflat)) + paddle.sum(paddle.square(tflat)) + smooth)
     return loss
 
 
@@ -34,7 +34,7 @@ def boundary_loss(boundary_logits, gtmasks):
     :return:
     """
     laplacian_kernel = np.array([-1, -1, -1, -1, 8, -1, -1, -1, -1], dtype=np.float32).reshape((3, 3))
-    fuse_kernel = np.array([[6. / 10], [3. / 10], [1. / 10]], dtype=np.float32).reshape((3))
+    fuse_kernel = np.array([[6. / 10], [3. / 10], [1. / 10]], dtype=np.float32).reshape(3)
     gtmasks = gtmasks.numpy().astype(np.uint8)
 
     boundary_targets_pyramids = np.zeros_like(gtmasks)

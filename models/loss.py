@@ -26,6 +26,48 @@ def dice_loss_func(inputs, target):
     return loss
 
 
+def boundary_loss(boundary_logits, gtmasks):
+    """
+    DetailAggregate 损失函数
+    :param boundary_logits:
+    :param gtmasks:
+    :return:
+    """
+    laplacian_kernel = np.array([-1, -1, -1, -1, 8, -1, -1, -1, -1], dtype=np.float32).reshape((3, 3))
+    fuse_kernel = np.array([[6. / 10], [3. / 10], [1. / 10]], dtype=np.float32).reshape((3))
+    gtmasks = gtmasks.numpy().astype(np.uint8)
+
+    boundary_targets_pyramids = np.zeros_like(gtmasks)
+    for idx, gtmask in enumerate(gtmasks):
+        gtmask = cv.filter2D(gtmask, -1, kernel=laplacian_kernel)
+
+        gtmask_x2 = cv.resize(gtmask, (0, 0), fx=0.5, fy=0.5, interpolation=cv.INTER_NEAREST).clip(min=0)
+        gtmask_x4 = cv.resize(gtmask, (0, 0), fx=0.25, fy=0.25, interpolation=cv.INTER_NEAREST).clip(min=0)
+
+        gtmask_x2_up = cv.resize(gtmask_x2, gtmasks.shape[1:][::-1], interpolation=cv.INTER_NEAREST)
+        gtmask_x4_up = cv.resize(gtmask_x4, gtmasks.shape[1:][::-1], interpolation=cv.INTER_NEAREST)
+
+        gtmask[gtmask > 0.1] = 1
+        gtmask[gtmask <= 0.1] = 0
+
+        gtmask_x2_up[gtmask_x2_up > 0.1] = 1
+        gtmask_x2_up[gtmask_x2_up <= 0.1] = 0
+
+        gtmask_x4_up[gtmask_x4_up > 0.1] = 1
+        gtmask_x4_up[gtmask_x4_up <= 0.1] = 0
+
+        boundary_targets_pyramid = gtmask*fuse_kernel[0] + gtmask_x2_up*fuse_kernel[1] + gtmask_x4_up*fuse_kernel[2]
+        boundary_targets_pyramid[boundary_targets_pyramid > 0.1] = 1
+        boundary_targets_pyramid[boundary_targets_pyramid <= 0.1] = 0
+
+        boundary_targets_pyramids[idx] = boundary_targets_pyramid
+    boundary_targets_pyramids = paddle.to_tensor(boundary_targets_pyramids, dtype=paddle.float32).unsqueeze(1)
+
+    bce_loss = F.binary_cross_entropy_with_logits(boundary_logits, boundary_targets_pyramids)
+    dice_loss = dice_loss_func(F.sigmoid(boundary_logits), boundary_targets_pyramids)
+    return bce_loss, dice_loss
+
+
 class OhemCELoss(nn.Layer):
     def __init__(self, thresh, n_min, ignore_lb=255):
         super(OhemCELoss, self).__init__()
@@ -50,28 +92,20 @@ class OhemCELoss(nn.Layer):
 class DetailAggregateLoss(nn.Layer):
     def __init__(self):
         """
-        todo: 重写，此方法用paddle会导致显存显著增加
+        todo: 用paddle实现的此方法会导致在训练阶段显存利用率持续增长
         """
         super(DetailAggregateLoss, self).__init__()
 
-        """self.laplacian_kernel = paddle.to_tensor(
+        self.laplacian_kernel = paddle.to_tensor(
             [-1, -1, -1, -1, 8, -1, -1, -1, -1],
-            dtype=paddle.float32).reshape((1, 1, 3, 3))"""
-        self.laplacian_kernel = np.array([-1, -1, -1, -1, 8, -1, -1, -1, -1], dtype=np.float32).reshape((3, 3))
+            dtype=paddle.float32).reshape((1, 1, 3, 3))
+        # self.laplacian_kernel = np.array([-1, -1, -1, -1, 8, -1, -1, -1, -1], dtype=np.float32).reshape((3, 3))
 
-        '''self.fuse_kernel = paddle.to_tensor([[6./10], [3./10], [1./10]], 
-            dtype=paddle.float32).reshape((1, 3, 1, 1))'''
-        self.fuse_kernel = np.array([[6./10], [3./10], [1./10]], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.fuse_kernel = paddle.to_tensor([[6. / 10], [3. / 10], [1. / 10]],
+                                            dtype=paddle.float32).reshape((1, 3, 1, 1))
+        # self.fuse_kernel = np.array([[6./10], [3./10], [1./10]], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def forward(self, boundary_logits, gtmasks):
-        boundary_targets = gtmasks.numpy()
-        for idx, np_gtmask in enumerate(boundary_targets):
-            np_gtmask = cv.filter2D(np_gtmask.astype(np.uint8), -1, self.laplacian_kernel)
-            np_gtmask = np.clip(np_gtmask, a_min=0, a_max=10000)
-            np_gtmask[np_gtmask > 0.1] = 1
-            np_gtmask[np_gtmask <= 0.1] = 0
-            boundary_targets[idx] = np_gtmask
-
         boundary_targets = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel, padding=1)
         boundary_targets = boundary_targets.clip(min=0)
 
@@ -105,9 +139,10 @@ class DetailAggregateLoss(nn.Layer):
         boundary_targets_pyramid[boundary_targets_pyramid > 0.1] = 1
         boundary_targets_pyramid[boundary_targets_pyramid <= 0.1] = 0
 
-        if boundary_logits.shape[-1] != boundary_targets.shape[-1]:
-            boundary_logits = F.upsample(boundary_logits, size=boundary_targets.shape[2:], mode='bilinear',
-                                         align_corners=True)
+        boundary_targets_pyramid = paddle.unsqueeze(gtmasks, axis=1).astype(paddle.float32)
+        boundary_targets_pyramid[boundary_targets_pyramid > 0.1] = 1
+        boundary_targets_pyramid[boundary_targets_pyramid <= 0.1] = 0
+
         bce_loss = F.binary_cross_entropy_with_logits(boundary_logits, boundary_targets_pyramid)
         dice_loss = dice_loss_func(F.sigmoid(boundary_logits), boundary_targets_pyramid)
         return bce_loss, dice_loss

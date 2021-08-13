@@ -16,7 +16,6 @@ from paddle import nn
 from paddle.nn import functional as F
 
 from .modules import Conv2D, STDC, FFM, ContextPath, BisNetOutput
-from .loss import DetailAggregateLoss
 
 
 class BiSeNet(nn.Layer):
@@ -115,10 +114,16 @@ class BiSeNet(nn.Layer):
 
         if self.training:  # 训练阶段
             if self.use_boundary_2 and self.use_boundary_4 and self.use_boundary_8:
+                feat_out_sp2 = F.upsample(feat_out_sp2, size=(H, W), mode="bilinear")
+                feat_out_sp4 = F.upsample(feat_out_sp4, size=(H, W), mode="bilinear")
+                feat_out_sp8 = F.upsample(feat_out_sp8, size=(H, W), mode="bilinear")
                 return feat_out, feat_out16, feat_out32, feat_out_sp2, feat_out_sp4, feat_out_sp8
             elif (not self.use_boundary_2) and self.use_boundary_4 and self.use_boundary_8:
+                feat_out_sp4 = F.upsample(feat_out_sp4, size=(H, W), mode="bilinear")
+                feat_out_sp8 = F.upsample(feat_out_sp8, size=(H, W), mode="bilinear")
                 return feat_out, feat_out16, feat_out32, feat_out_sp4, feat_out_sp8
             elif (not self.use_boundary_2) and (not self.use_boundary_4) and self.use_boundary_8:
+                feat_out_sp8 = F.upsample(feat_out_sp8, size=(H, W), mode="bilinear")
                 return feat_out, feat_out16, feat_out32, feat_out_sp8
             else:
                 return feat_out, feat_out16, feat_out32

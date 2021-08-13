@@ -22,7 +22,7 @@ from visualdl import LogWriter
 
 from tools.data_reader import CityScapes
 from models.network import BiSeNet
-from models.loss import OhemCELoss, DetailAggregateLoss
+from models.loss import OhemCELoss, boundary_loss
 from tools.utils import get_configuration, fill_ndarray
 
 
@@ -95,7 +95,6 @@ def run_train():
     score_thres = 0.7
     n_min = 16 * img_size * img_size // 16
     criteria_loss = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=255)
-    boundary_loss = DetailAggregateLoss()
 
     maxmIOU50 = -1
     stop_count = 0
@@ -117,7 +116,7 @@ def run_train():
             loss2 = criteria_loss(out16, label)
             loss3 = criteria_loss(out32, label)
 
-            boundery_bce_loss, boundery_dice_loss = 0., 0.
+            boundery_bce_loss, boundery_dice_loss = 0, 0
             if use_boundary_2:
                 # detail2 损失
                 boundery_bce_loss2, boundery_dice_loss2 = boundary_loss(detail2, label)

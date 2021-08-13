@@ -22,7 +22,7 @@ def dice_loss_func(inputs, target):
     iflat = inputs.flatten()
     tflat = target.flatten()
     intersection = paddle.sum(iflat * tflat)
-    loss = 1 - ((2. * intersection + smooth) / (paddle.sum(iflat) + paddle.sum(tflat) + smooth))
+    loss = 1 - ((2. * intersection + smooth) / (paddle.sum(paddle.square(iflat)) + paddle.sum(paddle.square(tflat)) + smooth))
     return loss
 
 

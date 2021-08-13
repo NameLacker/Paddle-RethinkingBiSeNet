@@ -13,6 +13,7 @@ import cv2 as cv
 import numpy as np
 import paddle
 import json
+import os
 
 from paddle.nn import functional as F
 
@@ -55,17 +56,7 @@ def run_test():
     print("测试集mIOU50: {}".format(mIOU50))
 
 
-def infer(img_path="/home/lacker/work/Dataset/cityscapes/leftImg8bit/val/frankfurt"
-                   "/frankfurt_000001_083852_leftImg8bit.png"):
-    params = paddle.load("inferences/model_maxmIOU50_1.1.pdparams")
-    net = BiSeNet(num_classes=19, use_boundary_8=True)
-    net.load_dict(params)
-    net.eval()
-
-    with open('./cityscapes_info.json', 'r') as fr:
-        labels_info = json.load(fr)
-    lb_map = {el['trainId']: el['color'] for el in labels_info}
-
+def infer(img_path, net, lb_map, idx=0):
     img, img_size = read_img(img_path)
     img_tensor = paddle.to_tensor([img], dtype=paddle.float32)
     logit = net(img_tensor)
@@ -77,8 +68,26 @@ def infer(img_path="/home/lacker/work/Dataset/cityscapes/leftImg8bit/val/frankfu
         res_img[pred == k] = v
     res_img[res_img > 255] = 255
     res_img[res_img < 0] = 0
-    cv.imwrite("res.png", res_img)
+    cv.imwrite("/home/lacker/work/Dataset/res/{}.png".format(idx), res_img)
+
+
+def batch_infer(root_path):
+    params = paddle.load("inferences/model_maxmIOU50_1.1.pdparams")
+    net = BiSeNet(num_classes=19, use_boundary_8=True)
+    net.load_dict(params)
+    net.eval()
+
+    with open('./cityscapes_info.json', 'r') as fr:
+        labels_info = json.load(fr)
+    lb_map = {el['trainId']: el['color'] for el in labels_info}
+
+    for idx, _file in enumerate(os.listdir(root_path)):
+        if "._" in _file:
+            continue
+        file_path = os.path.join(root_path, _file)
+        print(idx, file_path)
+        infer(file_path, net, lb_map, idx)
 
 
 if __name__ == '__main__':
-    infer()
+    batch_infer("/home/lacker/work/Dataset/cityscapes/leftImg8bit/val/frankfurt")

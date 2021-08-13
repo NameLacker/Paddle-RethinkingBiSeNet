@@ -70,6 +70,9 @@ def run_train():
     use_boundary_2 = train_cfg["use_boundary_2"]
     use_boundary_4 = train_cfg["use_boundary_4"]
     use_boundary_8 = train_cfg["use_boundary_8"]
+    continue_train = train_cfg["continue_train"]
+    opt_config = train_cfg["opt_config"]  # 读取优化器配置
+    load_params = train_cfg["load_params"]
 
     train_dataset = CityScapes(datalist_file="data/val.list")
     train_batch_sampler = paddle.io.DistributedBatchSampler(
@@ -84,8 +87,12 @@ def run_train():
     net = BiSeNet(num_classes=n_classes,
                   use_boundary_2=use_boundary_2, use_boundary_4=use_boundary_4, use_boundary_8=use_boundary_8)
 
+    if continue_train:
+        logger.info("加载模型参数...")
+        model_static = paddle.load(load_params)
+        net.load_dict(model_static)
+
     # 优化器配置
-    opt_config = train_cfg["opt_config"]  # 读取优化器配置
     values = [value * opt_config["learning_rate"] for value in opt_config["values"]]
     scheduler = paddle.optimizer.lr.PiecewiseDecay(boundaries=opt_config["boundaries"],
                                                    values=values)

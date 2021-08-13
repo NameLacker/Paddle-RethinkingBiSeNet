@@ -17,6 +17,10 @@ dataset_config:
 train_config:
   # 模型参数存放路径
   params_dir: ./inferences
+  # 持续上一次模型参数训练
+  continue_train: True
+  # 读取的模型参数路径
+  load_params: ./inferences/model_maxmIOU50_1.1.pdparams
   # 分类数
   n_classes: 19
   # 训练轮数

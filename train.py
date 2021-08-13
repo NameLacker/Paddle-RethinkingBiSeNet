@@ -93,10 +93,9 @@ def run_train():
         net.load_dict(model_static)
 
     # 优化器配置
-    values = [value * opt_config["learning_rate"] for value in opt_config["values"]]
-    scheduler = paddle.optimizer.lr.PiecewiseDecay(boundaries=opt_config["boundaries"],
-                                                   values=values)
-    opt = optimizer.SGD(learning_rate=scheduler, parameters=net.parameters(), weight_decay=5e-4)
+    scheduler = paddle.optimizer.lr.PolynomialDecay(opt_config["learning_rate"],
+                                                    decay_steps=train_cfg["num_epochs"], power=0.9)
+    opt = optimizer.Momentum(learning_rate=scheduler, parameters=net.parameters(), weight_decay=5e-4, momentum=0.9)
 
     # 损失函数
     score_thres = 0.7

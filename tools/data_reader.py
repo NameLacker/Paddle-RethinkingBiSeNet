@@ -42,7 +42,7 @@ class CityScapes(Dataset):
         self.create_datalist()
 
         self.random_horizontal_flip = RandomHorizontalFlip(1)
-        self.color_jitter = ColorJitter(0.5, 0.5, 0.5)
+        self.color_jitter = ColorJitter(0.3, 0.3, 0.3)
         self.normalize = Normalize(mean=[127.5, 127.5, 127.5], std=[127.5, 127.5, 127.5], data_format='HWC')
 
     def create_datalist(self):

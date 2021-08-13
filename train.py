@@ -26,7 +26,6 @@ from models.loss import OhemCELoss, boundary_loss
 from tools.utils import get_configuration
 from tools.evaluation import evaluate
 
-
 cfg = get_configuration()
 log_name = str(int(time.time()))
 log_writer = LogWriter("log/train_" + log_name)
@@ -149,7 +148,7 @@ def run_train():
                         .format(epoch_id, batch_id,
                                 loss.numpy()[0], boundery_bce_loss.numpy()[0], boundery_dice_loss.numpy()[0],
                                 scheduler.get_lr()))
-            break
+
         net.eval()
         num_eval = eval_dataset.__len__()
         hist = np.zeros((n_classes, n_classes), dtype=np.float32)
@@ -158,8 +157,6 @@ def run_train():
             print("\r", end="")
             percentage = int(100 * batch_id / num_eval)
             print("Evalution progress rate: {}%: ".format(percentage), "▋" * (percentage // 2), end="")
-            if batch_id == 10:
-                break
         print()
         ious = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
         mIOU50 = np.nanmean(ious)  # 增加对有nan值的处理

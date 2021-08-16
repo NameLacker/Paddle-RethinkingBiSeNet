@@ -51,6 +51,10 @@ class BiSeNet(nn.Layer):
         self.linear_1 = nn.Linear(1024, 1024)
         self.linear_2 = nn.Linear(1024, 1000)
 
+        self.laplacian_kernel = paddle.to_tensor(
+            [-1, -1, -1, -1, 8, -1, -1, -1, -1],
+            dtype=paddle.float32).reshape((1, 1, 3, 3))
+
     def create_backbone(self):
         """
         创建骨干网络

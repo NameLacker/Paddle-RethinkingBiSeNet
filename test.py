@@ -72,7 +72,7 @@ def infer(img_path, net, lb_map, idx=0):
 
 
 def batch_infer(root_path):
-    params = paddle.load("inferences/model_maxmIOU50_1.1.pdparams")
+    params = paddle.load("inferences/model_maxmIOU50_2.2e+01.pdparams")
     net = BiSeNet(num_classes=19, use_boundary_8=True)
     net.load_dict(params)
     net.eval()

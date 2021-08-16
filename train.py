@@ -22,7 +22,7 @@ from visualdl import LogWriter
 
 from tools.data_reader import CityScapes
 from models.network import BiSeNet
-from models.loss import OhemCELoss, boundary_loss
+from models.loss import OhemCELoss, DetailAggregateLoss
 from tools.utils import get_configuration
 from tools.evaluation import evaluate
 
@@ -62,7 +62,7 @@ init_log_config()  # 初始化日志输出
 
 def run_train():
     # 获取训练配置
-    img_size = 224
+    img_size = (512, 1024)
     train_cfg = cfg["train_config"]
     if not os.path.exists(train_cfg["params_dir"]):
         os.mkdir(train_cfg["params_dir"])
@@ -74,7 +74,7 @@ def run_train():
     opt_config = train_cfg["opt_config"]  # 读取优化器配置
     load_params = train_cfg["load_params"]
 
-    train_dataset = CityScapes(datalist_file="data/val.list")
+    train_dataset = CityScapes(datalist_file="/home/lacker/work/Dataset/cityscapes/val.list")
     train_batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset, batch_size=train_cfg["batch_size"], shuffle=True, drop_last=True)
     train_loader = paddle.io.DataLoader(train_dataset, batch_sampler=train_batch_sampler, num_workers=0,
@@ -99,8 +99,9 @@ def run_train():
 
     # 损失函数
     score_thres = 0.7
-    n_min = 16 * img_size * img_size // 16
+    n_min = 16 * img_size[0] * img_size[1] // 16
     criteria_loss = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=255)
+    boundary_loss = DetailAggregateLoss()
 
     maxmIOU50 = -1
     stop_count = 0

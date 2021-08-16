@@ -15,8 +15,10 @@ import cv2 as cv
 import random
 import json
 import os
+import os.path as osp
 
 from paddle.io import Dataset
+from paddle.vision import transforms
 from paddle.vision.transforms import ColorJitter, RandomHorizontalFlip, RandomCrop, Compose, Normalize
 
 from tools.utils import get_configuration

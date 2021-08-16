@@ -7,18 +7,18 @@ dataset_config:
   #　数据集根目录
   root: /home/lacker/work/Dataset/cityscapes
   # 训练数据列表文件
-  trainset_file: data/train.list
+  trainset_file: /home/lacker/work/Dataset/cityscapes/train.list
   # 验证数据列表文件
-  valset_file: data/val.list
+  valset_file: /home/lacker/work/Dataset/cityscapes/val.list
   # 测试数据列表文件
-  testset_file: data/test.list
+  testset_file: /home/lacker/work/Dataset/cityscapes/test.list
 
 # 训练参数
 train_config:
   # 模型参数存放路径
   params_dir: ./inferences
   # 持续上一次模型参数训练
-  continue_train: True
+  continue_train: False
   # 读取的模型参数路径
   load_params: ./inferences/model_maxmIOU50_1.1.pdparams
   # 分类数

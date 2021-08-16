@@ -63,6 +63,9 @@ def boundary_loss(boundary_logits, gtmasks):
         boundary_targets_pyramids[idx] = boundary_targets_pyramid
     boundary_targets_pyramids = paddle.to_tensor(boundary_targets_pyramids, dtype=paddle.float32).unsqueeze(1)
 
+    if boundary_logits.shape[2:] != boundary_targets_pyramids.shape[2:]:
+        boundary_logits = F.interpolate(boundary_logits, boundary_targets_pyramids.shape[2:], mode='nearest')
+
     bce_loss = F.binary_cross_entropy_with_logits(boundary_logits, boundary_targets_pyramids)
     dice_loss = dice_loss_func(F.sigmoid(boundary_logits), boundary_targets_pyramids)
     return bce_loss, dice_loss
@@ -99,6 +102,7 @@ class DetailAggregateLoss(nn.Layer):
         self.laplacian_kernel = paddle.to_tensor(
             [-1, -1, -1, -1, 8, -1, -1, -1, -1],
             dtype=paddle.float32).reshape((1, 1, 3, 3))
+
         # self.laplacian_kernel = np.array([-1, -1, -1, -1, 8, -1, -1, -1, -1], dtype=np.float32).reshape((3, 3))
 
         self.fuse_kernel = paddle.to_tensor([[6. / 10], [3. / 10], [1. / 10]],
@@ -119,9 +123,9 @@ class DetailAggregateLoss(nn.Layer):
         boundary_targets_x8 = F.conv2d(gtmasks.unsqueeze(1).astype(paddle.float32), self.laplacian_kernel,
                                        stride=8, padding=1).clip(min=0)
 
-        boundary_targets_x2_up = F.upsample(boundary_targets_x2, size=boundary_targets.shape[2:], mode='nearest')
-        boundary_targets_x4_up = F.upsample(boundary_targets_x4, size=boundary_targets.shape[2:], mode='nearest')
-        boundary_targets_x8_up = F.upsample(boundary_targets_x8, size=boundary_targets.shape[2:], mode='nearest')
+        boundary_targets_x2_up = F.interpolate(boundary_targets_x2, size=boundary_targets.shape[2:], mode='nearest')
+        boundary_targets_x4_up = F.interpolate(boundary_targets_x4, size=boundary_targets.shape[2:], mode='nearest')
+        boundary_targets_x8_up = F.interpolate(boundary_targets_x8, size=boundary_targets.shape[2:], mode='nearest')
 
         boundary_targets_x2_up[boundary_targets_x2_up > 0.1] = 1
         boundary_targets_x2_up[boundary_targets_x2_up <= 0.1] = 0
@@ -143,6 +147,11 @@ class DetailAggregateLoss(nn.Layer):
         boundary_targets_pyramid[boundary_targets_pyramid > 0.1] = 1
         boundary_targets_pyramid[boundary_targets_pyramid <= 0.1] = 0
 
+        if boundary_logits.shape[2:] != boundary_targets_pyramid.shape[2:]:
+            boundary_logits = F.interpolate(boundary_logits, size=boundary_targets_pyramid.shape[2:], mode='nearest')
+
+        N, C, H, W = boundary_logits.shape
+        boundary_targets_pyramid = paddle.randn((N, C, H, W), dtype=paddle.float32)
         bce_loss = F.binary_cross_entropy_with_logits(boundary_logits, boundary_targets_pyramid)
         dice_loss = dice_loss_func(F.sigmoid(boundary_logits), boundary_targets_pyramid)
         return bce_loss, dice_loss
